@@ -66,9 +66,13 @@ class Category:
         self.y_norm = None
         self.drug_start_day = drug_start_day
 
+        self.start = None
+        self.end = None
+
         self.phlc_id = phlc_id
         self.replicates = replicates
         self.is_control = is_control
+        self.kl_p_cvsc = None
 
         # GPs
         self.gp = None
@@ -105,7 +109,9 @@ class Category:
         
         self.auc_gp=None
         self.auc_gp_control = None
-        self.auc_control={ }
+        self.auc_control={}
+        self.auc_control_norm = {}
+        self.direction = None
 
         # credible intervals stats
         self.credible_intervals = []
@@ -425,18 +431,6 @@ class Category:
         """
 
 
-## {701: response angle, ...}
-#DONE self.response_angle = {}
-#DONE self.response_angle_rel={}
-#
-#self.response_angle_control={}
-#self.response_angle_rel_control={}
-#
-##response angles based on average of curves
-#self.average_angle=None
-#self.average_angle_rel=None
-#self.average_angle_control = None
-#self.average_angle_rel_control = None  
         start = self.find_start_date_index()     
         for i in range(len(self.replicates)):
             
@@ -473,26 +467,30 @@ class Category:
 
         
 
-    def calculate_auc(self):
+    def calculate_auc(self, control):
         """
         Builds the AUC (Area under the curve) dict for y.
 
         :return
         """
+        start = max(self.find_start_date_index(),control.measurement_start)
+        end = min(self.measurement_end,control.measurement_end)
         for i in range(len(self.replicates)):
-            self.auc[self.replicates[i]] = self.__calculate_AUC(self.x.ravel(),self.y[i])
+            self.auc[self.replicates[i]] = self.__calculate_AUC(self.x.ravel()[start:end],self.y[i, start:end])
 
 
 
-    def calculate_auc_norm(self):
+    def calculate_auc_norm(self, control):
         """
         Builds the AUC (Area under the curve) dict. for y_norm
 
         :return
         """
-#       
+        start = max(self.find_start_date_index(),control.measurement_start)
+        end = min(self.measurement_end,control.measurement_end)
         for i in range(len(self.replicates)):
-            self.auc_norm[self.replicates[i]] = self.__calculate_AUC(self.x.ravel(),self.y_norm[i])
+
+            self.auc_norm[self.replicates[i]] = self.__calculate_AUC(self.x.ravel()[start:end],self.y_norm[i, start:end])
 
           
 
@@ -666,7 +664,8 @@ c        :param control: control Category object
         for x in control.x:
             self.rates_list_control.append(self.__gp_derivative(x,control.gp)[0])
         self.rates_list = np.ravel(self.rates_list)
-        self.rates_list_control = np.ravel(self.rates_list_control) 
+        self.rates_list_control = np.ravel(self.rates_list_control)
+        logger.info("Done calcluating GP derivatives for: " + self.name+' and control')
 
     def plot_with_control(self, control=None, output_path=None, show_kl_divergence=True, show_legend=True,
                           file_type=None, output_pdf=None):

@@ -1,4 +1,4 @@
-# pdxat
+# kulgap 
 Patient-derived xenograft analysis toolkit
 
 ### Installing
@@ -6,7 +6,7 @@ Patient-derived xenograft analysis toolkit
 Should be able to install the package (once registered and uploaded to PyPI) with
 
 ```
-$ pip install pdxat
+$ pip install kulgap
 ```
 
 ### Development

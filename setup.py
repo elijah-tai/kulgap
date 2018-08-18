@@ -1,12 +1,12 @@
 from distutils.core import setup
 
 setup(
-    name='pdxat',
+    name='kulgap',
     version='0.1dev',
-    packages=['pdxat',],
+    packages=['kulgap',],
     author='Elijah Tai and Janosch Ortmann',
     author_email='elijah.tai@outlook.com',
-    url='https://github.com/itselijahtai/pdxat',
+    url='https://github.com/itselijahtai/kulgap',
     long_description=open('README.md').read(),
     install_requires=[
         'pandas',
