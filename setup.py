@@ -14,6 +14,7 @@ setup(
         'scipy',
         'GPy',
         'matplotlib',
+        'mypy',
     ],
     test_suite='nose.collector',
     tests_require=['nose'],
