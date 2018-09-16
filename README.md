@@ -1,5 +1,6 @@
 # kulgap 
-Patient-derived xenograft analysis toolkit
+
+Calculate relative entropy between Gaussian processes.
 
 ### Installing
 
