@@ -13,6 +13,8 @@ from scipy.stats import norm
 
 from GPy import plotting, models, kern
 
+import statsmodels.api as sm
+
 
 class Metrics:
 
@@ -22,8 +24,8 @@ class Metrics:
 
         'MRECIST', 'MRECIST_COUNTS',
 
-        'RESPONSE_ANGLE', 'RESPONSE_ANGLE_RELATIVE',
-        'RESPONSE_ANGLE_AVERAGE', 'RESPONSE_ANGLE_AVERAGE_RELATIVE',
+        'ANGLE', 'ANGLE_RELATIVE',
+        'ANGLE_AVERAGE', 'ANGLE_AVERAGE_RELATIVE',
 
         'AUC', 'AUC_NORM', 'AUC_GP',
 
@@ -73,7 +75,7 @@ class Metrics:
     @classmethod
     def valid_types(cls, types: list):
         unsupported_metrics = set(map(str.lower, types)) - set(map(str.lower, cls.TYPES))
-
+        
         if unsupported_metrics:
             raise UnsupportedMetricError(
                 "The following metrics are not supported: " + str(unsupported_metrics)
@@ -253,7 +255,7 @@ class Metrics:
 
         return all_pseudo_controls, all_pseudo_cases
 
-    def response_angle(self):
+    def gp_angle(self):
         raise NotImplementedError
 
     def auc(self):
