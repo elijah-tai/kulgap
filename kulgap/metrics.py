@@ -87,10 +87,16 @@ class Metrics:
             for metric_type in types:
                 TYPE_TO_FUNCTION[metric_type]()
 
-    def _fit_gaussian_process(self):
+    def fit_gaussian_process(self):
         """
         Fits a single Gaussian process on the collection
         """
+
+        num_replicates = self.collection.obs_seqs.shape[0]
+        time_length = self.collection.obs_seqs.shape[1]
+
+        x = np.tile(self.collection.obs_times, (1, num_replicates)).T
+        y = np.resize(self.collection.obs_seqs_norm, (num_replicates * time_length, 1))
 
         # RBF = radial basis function / squared exponential by default
         self.gp_kernel = kern.RBF(
@@ -99,23 +105,49 @@ class Metrics:
             lengthscale=self.GP_LENGTH_SCALE
         )
 
-        x = np.tile(self.collection.obs_times, (len(self.collection), 1))
-        y = np.resize(self.collection.obs_seqs_norm, ())
+        self.fit_gp = models.GPRegression(x, y, self.gp_kernel)
+        self.fit_gp.optimize_restarts(
+            num_restarts=self.NUM_OPTIMIZE_RESTARTS, messages=False
+            )
 
-        self.fit_gp = GPRegression(x, y, self.gp_kernel)
-        self.fit_gp.optimize_restarts(num_restarts=self.NUM_OPTIMIZE_RESTARTS, messages=False)
+    def kl_divergence(self, other_metrics) -> float:
+        """
+        Compare the current GP with other_gp
 
-    def kl_divergence(self):
-        if self.fit_gp:
-            pass
-        else:
-            self._fit_gaussian_process()
+        :param other_gp: Another GP to compare with
+        :return: kl_divergence
+        """
+
+        if not self.fit_gp:
+            logger.info("Currently no fit GP on %s, fitting a GP" % self.collection.name)
+            self.fit_gaussian_process()
+        
+        if not other_metrics.fit_gp:
+            logger.info("Currently no fit GP on %s, fitting a GP" % other_metrics.collection.name)
+            other_metrics.fit_gaussian_process()
+
+        logger.info("Calculating the KL Divergence between %s and %s" % \
+            (self.collection.name, other_metrics.collection.name))
+
+        def kl_integrand(t):
+            control_mean, control_var = other_metrics.fit_gp.predict(np.asarray([[t]]))
+            case_mean, case_var = self.fit_gp.predict(np.asarray([[t]]))
+
+            return np.log10(case_var / control_var) + \
+                ((control_var + (control_mean - case_mean) ** 2) / (2 * case_var))
+
+        kl_divergence = abs(quad(kl_integrand, 0, max(self.collection.obs_times)) \
+            - max(self.collection.obs_times) / 2)[0]
+        
+        logger.info("Calculated KL divergence is: %f" % kl_divergence)
+
+        return kl_divergence
 
     def kl_p_value(self):
         if self.fit_gp:
             pass
         else:
-            self._fit_gaussian_process()
+            self.fit_gaussian_process()
 
     def response_angle(self):
         raise NotImplementedError
@@ -127,7 +159,7 @@ class Metrics:
         if self.fit_gp:
             pass
         else:
-            self._fit_gaussian_process()
+            self.fit_gaussian_process()
 
     def auc_norm(self):
         raise NotImplementedError
@@ -139,13 +171,13 @@ class Metrics:
         if self.fit_gp:
             pass
         else:
-            self._fit_gaussian_process()
+            self.fit_gaussian_process()
 
     def percent_credible_intervals(self):
         if self.fit_gp:
             pass
         else:
-            self._fit_gaussian_process()
+            self.fit_gaussian_process()
 
     def write_metrics(self, out_path):
         raise NotImplementedError

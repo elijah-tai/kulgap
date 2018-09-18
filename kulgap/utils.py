@@ -4,7 +4,7 @@ import numpy as np
 
 from kulgap.config import logger
 
-def find_start_date_index(obs_times: np.array, drug_start_day: int) -> int:
+def find_start_date_index(obs_times: np.ndarray, drug_start_day: int) -> int:
     """
     Returns the index in the array of the location of the drug's
     start day, + or - 1.
@@ -20,15 +20,15 @@ def find_start_date_index(obs_times: np.array, drug_start_day: int) -> int:
             start_found = True
     return start
 
-def normalize_data(obs_times, obs_seqs, drug_start_day) -> np.array:
+def normalize_data(obs_times: np.ndarray, obs_seqs: np.ndarray, drug_start_day: int = 0) -> np.array:
     """
     Normalizes all observations.
 
     :return:
     """
-    logger.log("Normalizing data...")
+    logger.info("Normalizing data...")
 
-    def normalize_treatment_start_day_and_log_transform(y, treatment_start):
+    def normalize_treatment_start_day_and_log_transform(y, drug_start_day):
         """
         Normalize by dividing every y element-wise by the first day's median
         and then taking the log.
@@ -36,7 +36,7 @@ def normalize_data(obs_times, obs_seqs, drug_start_day) -> np.array:
         :param y:
         :return:
         """
-        return np.log(np.asarray((y.T + 0.01) / y.T[int(treatment_start)], dtype=float).T) + 1
+        return np.log(np.asarray((y.T + 0.01) / y.T[drug_start_day], dtype=float).T) + 1
 
     # TODO: Need to normalize on treatment start_day
     return normalize_treatment_start_day_and_log_transform(

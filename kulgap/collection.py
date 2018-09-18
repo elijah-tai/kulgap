@@ -26,17 +26,19 @@ class Collection:
         """
 
         self.name = name
+        self.metadata = Metadata()
 
         if not isinstance(obs_times, np.ndarray):
             raise TimeValidationError(str(obs_times) + " is not a list.")
 
         self._obs_times = obs_times
         self._obs_seqs: np.array = obs_seqs
-        self._obs_seqs_norm: np.array = None
+        self._obs_seqs_norm: np.array = utils.normalize_data(
+            self.obs_times,
+            self.obs_seqs
+            )
 
         self._num_sequences: int = len(obs_seqs)
-
-        self.metadata = Metadata()
 
     @property
     def obs_times(self):
@@ -58,16 +60,6 @@ class Collection:
         or else this append will not work.
         """
         np.append(self._obs_seqs, sequence, axis=0)
-
-    def normalize_obs_seqs(self):
-        """
-        Normalizes observations.
-        """
-        self._obs_seqs_norm = utils.normalize_data(
-            self.obs_times,
-            self.obs_seqs,
-            self.metadata.gp_start
-            )
 
     def create_full_data(self):
         pass
