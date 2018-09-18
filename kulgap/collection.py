@@ -3,7 +3,7 @@ import numpy as np
 from kulgap.errors import TimeValidationError
 from kulgap.metadata import Metadata
 
-import kulgap.utils as utils
+from kulgap import utils
 from kulgap.config import logger
 
 

@@ -4,6 +4,20 @@ import numpy as np
 
 from kulgap.config import logger
 
+
+def normalize(y, start): # relativize
+    return y / y[start] - 1
+
+def centre(y, start):
+    return y - y[start]
+
+def calculate_p_value(observed, empirical):
+    """
+    Calculates the p_value of a given observation in empirical tests.
+    """
+
+    return (len([x for x in empirical if x >= observed]) + 1) / (len(empirical) + 1)
+
 def find_start_date_index(obs_times: np.ndarray, drug_start_day: int) -> int:
     """
     Returns the index in the array of the location of the drug's
