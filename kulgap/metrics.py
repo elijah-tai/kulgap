@@ -74,12 +74,13 @@ class Metrics:
 
     @classmethod
     def valid_types(cls, types: list):
-        unsupported_metrics = set(map(str.lower, types)) - set(map(str.lower, cls.TYPES))
-        
+        unsupported_metrics = set(
+            map(str.lower, types)) - set(map(str.lower, cls.TYPES))
+
         if unsupported_metrics:
             raise UnsupportedMetricError(
-                "The following metrics are not supported: " + str(unsupported_metrics)
-                )
+                "The following metrics are not supported: " +
+                str(unsupported_metrics))
 
         return True
 
@@ -108,7 +109,14 @@ class Metrics:
         return new_x, new_y
 
     @staticmethod
-    def _fit_gaussian_process(x, y, kernel = kern.RBF(1, 1., 10.), num_restarts: int = 7):
+    def _fit_gaussian_process(
+            x,
+            y,
+            kernel=kern.RBF(
+                1,
+                1.,
+                10.),
+            num_restarts: int = 7):
         """
         Fits a Gaussian process
         """
@@ -136,7 +144,7 @@ class Metrics:
 
         self.fit_gp, self.gp_kernel = Metrics._fit_gaussian_process(
             x, y, self.gp_kernel, self.NUM_OPTIMIZE_RESTARTS
-            )
+        )
 
     @staticmethod
     def _kl_divergence(gp_control, gp_case, obs_times, case_start: int = 0):
@@ -148,12 +156,12 @@ class Metrics:
             control_mean, control_var = gp_control.predict(np.asarray([[t]]))
             case_mean, case_var = gp_case.predict(np.asarray([[t]]))
 
-            return np.log10(case_var / control_var) + \
-                ((control_var + (control_mean - case_mean) ** 2) / (2 * case_var))
+            return np.log10(case_var / control_var) + ((control_var + \
+                            (control_mean - case_mean) ** 2) / (2 * case_var))
 
-        kl_divergence = abs(quad(kl_integrand, case_start, max(obs_times)) \
-            - max(obs_times) / 2)[0]
-        
+        kl_divergence = abs(quad(kl_integrand, case_start, max(obs_times))
+                            - max(obs_times) / 2)[0]
+
         return kl_divergence
 
     def kl_divergence(self, other_metrics) -> float:
@@ -165,18 +173,23 @@ class Metrics:
         """
 
         if not self.fit_gp:
-            logger.info("Currently no fit GP on %s, fitting a GP" % self.collection.name)
+            logger.info(
+                "Currently no fit GP on %s, fitting a GP" %
+                self.collection.name)
             self.fit_gaussian_process()
-        
+
         if not other_metrics.fit_gp:
-            logger.info("Currently no fit GP on %s, fitting a GP" % other_metrics.collection.name)
+            logger.info(
+                "Currently no fit GP on %s, fitting a GP" %
+                other_metrics.collection.name)
             other_metrics.fit_gaussian_process()
 
-        logger.info("Calculating the KL Divergence between %s and %s" % \
-            (self.collection.name, other_metrics.collection.name))
+        logger.info("Calculating the KL Divergence between %s and %s" %
+                    (self.collection.name, other_metrics.collection.name))
 
-        kl_divergence = self._kl_divergence(other_metrics.fit_gp, self.fit_gp, self.collection.obs_times)
-        
+        kl_divergence = self._kl_divergence(
+            other_metrics.fit_gp, self.fit_gp, self.collection.obs_times)
+
         logger.info("Calculated KL divergence is: %f" % kl_divergence)
 
         return kl_divergence
@@ -192,18 +205,24 @@ class Metrics:
         """
 
         if not self.fit_gp:
-            logger.info("Currently no fit GP on %s, fitting a GP" % self.collection.name)
+            logger.info(
+                "Currently no fit GP on %s, fitting a GP" %
+                self.collection.name)
             self.fit_gaussian_process()
 
         if not other_metrics.fit_gp:
-            logger.info("Currently no fit GP on %s, fitting a GP" % other_metrics.collection.name)
+            logger.info(
+                "Currently no fit GP on %s, fitting a GP" %
+                other_metrics.collection.name)
             other_metrics.fit_gaussian_process()
 
-        all_pseudo_controls, all_pseudo_cases = self._randomize_controls_cases_procedural(other_metrics.collection)
+        all_pseudo_controls, all_pseudo_cases = self._randomize_controls_cases_procedural(
+            other_metrics.collection)
 
         empirical_kl = []
         counter = 0
-        for pseudo_controls, pseudo_cases in zip(all_pseudo_controls, all_pseudo_cases):
+        for pseudo_controls, pseudo_cases in zip(
+                all_pseudo_controls, all_pseudo_cases):
             logger.info("Processed %i out of %i cases" % (counter, len(
                 all_pseudo_controls + all_pseudo_cases
             )))
@@ -221,13 +240,18 @@ class Metrics:
             gp_control, _ = self._fit_gaussian_process(control_x, i)
             gp_case, _ = self._fit_gaussian_process(case_x, j)
 
-            empirical_kl.append((Metrics._kl_divergence(gp_control, gp_case, case_x)))
-            
+            empirical_kl.append(
+                (Metrics._kl_divergence(
+                    gp_control, gp_case, case_x)))
+
             counter += 1
 
-        p_value = utils.calculate_p_value(self.kl_divergence(other_metrics), empirical_kl)
+        p_value = utils.calculate_p_value(
+            self.kl_divergence(other_metrics), empirical_kl)
 
-        logger.info("The calculated p value for %s is: %f." % (self.collection.name, p_value))
+        logger.info(
+            "The calculated p value for %s is: %f." %
+            (self.collection.name, p_value))
 
         return p_value
 
@@ -241,21 +265,65 @@ class Metrics:
 
         all_pseudo_controls, all_pseudo_cases = [], []
 
-        control_num_replicates = len(control_collection.obs_seqs_norm) 
+        control_num_replicates = len(control_collection.obs_seqs_norm)
         case_num_replicates = len(self.collection.obs_seqs_norm)
 
-        all_y_norm = np.append(self.collection.obs_seqs_norm, control_collection.obs_seqs_norm, axis=0)
+        all_y_norm = np.append(
+            self.collection.obs_seqs_norm,
+            control_collection.obs_seqs_norm,
+            axis=0)
 
-        for pattern in itertools.product([True, False], repeat=len(all_y_norm)):
-            all_pseudo_controls.append([x[1] for x in zip(pattern, all_y_norm) if x[0]])
-            all_pseudo_cases.append([x[1] for x in zip(pattern, all_y_norm) if not x[0]])
+        for pattern in itertools.product(
+                [True, False], repeat=len(all_y_norm)):
+            all_pseudo_controls.append(
+                [x[1] for x in zip(pattern, all_y_norm) if x[0]])
+            all_pseudo_cases.append(
+                [x[1] for x in zip(pattern, all_y_norm) if not x[0]])
 
-        all_pseudo_controls = [x for x in all_pseudo_controls if control_num_replicates == len(x)]
-        all_pseudo_cases = [x for x in all_pseudo_cases if case_num_replicates == len(x)]
+        all_pseudo_controls = [
+            x for x in all_pseudo_controls if control_num_replicates == len(x)]
+        all_pseudo_cases = [
+            x for x in all_pseudo_cases if case_num_replicates == len(x)]
 
         return all_pseudo_controls, all_pseudo_cases
 
-    def gp_angle(self):
+    def gp_angles(self, start_index: int = 0):
+        """
+        Calculates a very simple angle for each series of observations.
+
+        Arguments:
+            start_index {int} -- Where to begin fitting linear model
+        """
+
+        def _compute_angle(x, y, start_index):
+            min_length = min(len(x), len(y))
+            model = sm.OLS(y[start_index:min_length],
+                           x[start_index:min_length])
+            results = model.fit()
+            return np.arctan2(results.params[0])
+
+        def _centre_around_start(y, start_index):
+            """Normalize (?) data around value of starting index
+
+            Arguments:
+                y {np.array} -- Observation sequence
+                start_index {int} --
+            """
+            return y - y[start_index]
+
+        angles = {}
+        x = self.collection.obs_times
+        y = self.collection.obs_seqs
+        num_obs_seqs = len(y)
+
+        for i in range(num_obs_seqs):
+            angles[i] = _compute_angle(
+                x.ravel(), _centre_around_start(
+                    y, start_index), start_index)
+
+        return angles
+
+    def gp_average_angle(self, start_index: int = 0):
         raise NotImplementedError
 
     def auc(self):

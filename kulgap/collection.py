@@ -15,9 +15,12 @@ class Collection:
     The collection is what the GP is fit on.
     """
 
-    # 
-
-    def __init__(self, name: str, obs_times: np.ndarray, obs_seqs: np.ndarray, normalize: bool = True) -> None:
+    def __init__(
+            self,
+            name: str,
+            obs_times: np.ndarray,
+            obs_seqs: np.ndarray,
+            normalize: bool = True) -> None:
         """
         :param name:        name of the collection
         :param metadata:    metadata information about each collection
@@ -34,7 +37,7 @@ class Collection:
         self._obs_times = obs_times
         self._obs_seqs: np.array = obs_seqs
         self._obs_seqs_norm: np.array = None
-        
+
         if normalize:
             self._obs_seqs_norm = utils.normalize_data(
                 self.obs_times,

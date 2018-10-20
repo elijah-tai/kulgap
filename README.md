@@ -1,16 +1,16 @@
-# kulgap 
+# kulgap
 
 Calculate relative entropy between Gaussian processes.
 
-### Installing
+# Installing
 
-Should be able to install the package (once registered and uploaded to PyPI) with
+Should be able to install the package(once registered and uploaded to PyPI) with
 
 ```
 $ pip install kulgap
 ```
 
-### Development
+# Development
 
 For registering the package:
 

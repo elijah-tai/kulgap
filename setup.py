@@ -3,7 +3,7 @@ from distutils.core import setup
 setup(
     name='kulgap',
     version='0.1dev',
-    packages=['kulgap',],
+    packages=['kulgap', ],
     author='Elijah Tai and Janosch Ortmann',
     author_email='elijah.tai@outlook.com',
     url='https://github.com/itselijahtai/kulgap',
