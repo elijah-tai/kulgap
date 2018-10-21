@@ -8,7 +8,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='kulgap',
-    version='0.1.dev0',
+    version='0.1.0.dev0',
     packages=['kulgap', ],
     author='Elijah Tai, Janosch Ortmann',
     author_email='elijah.tai@outlook.com',
