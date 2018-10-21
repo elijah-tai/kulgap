@@ -1,5 +1,7 @@
 # kulgap
 
+[![PyPI version](https://badge.fury.io/py/kulgap.svg)](https://badge.fury.io/py/kulgap)
+
 Calculate relative entropy between Gaussian processes.
 
 # Installing
