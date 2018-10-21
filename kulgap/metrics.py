@@ -4,7 +4,7 @@ import itertools
 
 import numpy as np
 
-from kulgap.errors import UnsupportedMetricError
+from kulgap.errors import UnsupportedMetricError, UnsupportedScalingError
 from kulgap.config import logger
 from kulgap import utils
 
@@ -22,20 +22,24 @@ class Metrics:
     TYPES = (
         'KL_DIVERGENCE', 'KL_P_VALUE',
 
-        'MRECIST', 'MRECIST_COUNTS',
+        'MRECIST', 
+        # 'MRECIST_COUNTS',
 
-        'ANGLE', 'ANGLE_RELATIVE',
-        'ANGLE_AVERAGE', 'ANGLE_AVERAGE_RELATIVE',
+        'ANGLE', 
+        
+        # 'ANGLE_RELATIVE',
+        # 'ANGLE_AVERAGE', 'ANGLE_AVERAGE_RELATIVE',
 
-        'AUC', 'AUC_NORM', 'AUC_GP',
+        # 'AUC', 'AUC_NORM', 
+        'AUC_GP',
 
-        'DIRECTION',
+        # 'DIRECTION',
 
-        'CREDIBLE_INTERVALS', 'PERCENT_CREDIBLE_INTERVALS',
+        # 'CREDIBLE_INTERVALS', 'PERCENT_CREDIBLE_INTERVALS',
 
-        'RATES_LIST',
+        # 'RATES_LIST',
 
-        'DELTA_LOG_LIKELIHOOD_H0_H1'
+        # 'DELTA_LOG_LIKELIHOOD_H0_H1'
     )
 
     # a mapping of Metric types to the function needed to calculate them
@@ -287,7 +291,35 @@ class Metrics:
 
         return all_pseudo_controls, all_pseudo_cases
 
-    def gp_angles(self, start_index: int = 0):
+    @staticmethod
+    def _centre_around_start(y, start_index):
+        """Centre data around value of starting index
+
+        Arguments:
+            y {np.array} -- Observation sequence
+            start_index {int} -- Start time
+        """
+        return y - y[start_index]
+
+    @staticmethod
+    def _relativize_around_start(y, start_index):
+        """Normalize each observation value by first observation value
+
+        Arguments:
+            y {np.array} -- Observation sequence
+            start_index {int} -- Start time
+        """
+        return y / y[start_index] - 1
+
+    @staticmethod
+    def _compute_angle(x, y, start_index):
+        min_length = min(len(x), len(y))
+        model = sm.OLS(y[start_index:min_length],
+                       x[start_index:min_length])
+        results = model.fit()
+        return np.arctan(results.params[0])
+
+    def angles(self, start_index: int = 0):
         """
         Calculates a very simple angle for each series of observations.
 
@@ -295,59 +327,130 @@ class Metrics:
             start_index {int} -- Where to begin fitting linear model
         """
 
-        def _compute_angle(x, y, start_index):
-            min_length = min(len(x), len(y))
-            model = sm.OLS(y[start_index:min_length],
-                           x[start_index:min_length])
-            results = model.fit()
-            return np.arctan2(results.params[0])
-
-        def _centre_around_start(y, start_index):
-            """Normalize (?) data around value of starting index
-
-            Arguments:
-                y {np.array} -- Observation sequence
-                start_index {int} --
-            """
-            return y - y[start_index]
-
         angles = {}
         x = self.collection.obs_times
         y = self.collection.obs_seqs
-        num_obs_seqs = len(y)
+        num_obs_seqs = y.shape[0]
 
         for i in range(num_obs_seqs):
-            angles[i] = _compute_angle(
-                x.ravel(), _centre_around_start(
-                    y, start_index), start_index)
+            centred_y_i = Metrics._centre_around_start(y[i], start_index)
+            angles[i] = Metrics._compute_angle(
+                x.ravel(), centred_y_i, start_index)
 
         return angles
 
-    def gp_average_angle(self, start_index: int = 0):
-        raise NotImplementedError
+    def average_angle(
+            self,
+            method: str = 'centre',
+            start_index: int = 0) -> float:
+        """Returns the average angles of all of the obs_seqs for the collection.
+
+        Keyword Arguments:
+            method {str} -- Can be either 'centre' or 'relativize' (default: {'centre'})
+            start_index {int} -- [description] (default: {0})
+
+        Returns:
+            float -- The angle fit to the observations after some scaling
+        """
+        x = self.collection.obs_times
+        y = self.collection.obs_seqs
+
+        if method is 'centre':
+            y_means = Metrics._centre_around_start(
+                np.nanmean(y, axis=0), start_index)
+        elif method is 'relativize':
+            y_means = Metrics._relativize_around_start(
+                np.nanmean(y, axis=0), start_index)
+        else:
+            raise UnsupportedScalingError(
+                "The given method: \"{}\", is not supported.".format(method))
+
+        return Metrics._compute_angle(x.ravel(), y_means, start_index)
+
+    @staticmethod
+    def _calculate_AUC(x, y):
+        area = 0
+        l = min(len(x), len(y))
+        for j in range(l - 1):
+            area += (y[j + 1] - y[j]) / (x[j + 1] - x[j])
+        return area 
 
     def auc(self):
-        raise NotImplementedError
+        """
+        Builds the AUC dict for y
+        """
+        # TODO: Not sure if we need this
 
+        raise NotImplementedError
+    
     def auc_norm(self):
+        """
+        Builds the AUC dict for y_norm
+        """
+        # TODO: Not sure if we need this
         raise NotImplementedError
 
     def gp_auc(self):
-        if self.fit_gp:
-            pass
-        else:
+        """ 
+        Builds AUC of the GP.
+        """
+        if not self.fit_gp:
             self.fit_gaussian_process()
+        
+        x = self.collection.obs_times
+        return Metrics._calculate_AUC(x, self.fit_gp.predict(x)[0])
 
-    def mrecist(self):
-        raise NotImplementedError
+    # TODO: Things specific to cancer growth should be separate
+    def mrecist(self, start_index: int = 0):
+        """Builds the mRECIST dict.
+
+        - **mCR**: BestResponse < -95% AND BestAverageResponse < -40%
+        - **mPR**: BestResponse < -50% AND BestAverageResponse < -20%
+        - **mSD**: BestResponse < 35% AND BestAverageResponse < 30%
+        - **mPD**: everything else
+        """
+        x = self.collection.obs_times
+        y = self.collection.obs_seqs
+        num_obs_seqs = y.shape[0]
+
+        mrecist = {}
+        for i in range(num_obs_seqs):
+            days_volume = zip(x, y[i])
+            days = x 
+
+            initial_volume = y[i][start_index]
+
+            responses = []
+            average_responses = []
+
+            day_diff = 0
+
+            for day, volume in days_volume:
+                day_diff = day - start_index
+                if day >= start_index and day_diff >= 3:
+                    responses.append(((volume - initial_volume) / initial_volume) * 100)
+                    average_responses.append(np.average(responses))
+
+            if min(responses) < -95 and min(average_responses) < -40:
+                mrecist[i] = 'mCR'
+            elif min(responses) < -50 and min(average_responses) < -20:
+                mrecist[i] = 'mPR'
+            elif min(responses) < 35 and min(average_responses) < 30:
+                mrecist[i] = 'mSD'
+            else:
+                mrecist[i] = 'mPD'
+
+        return mrecist
 
     def credible_intervals(self):
+        # TODO
         if self.fit_gp:
             pass
         else:
             self.fit_gaussian_process()
 
     def percent_credible_intervals(self):
+        # TODO
         if self.fit_gp:
             pass
         else:
