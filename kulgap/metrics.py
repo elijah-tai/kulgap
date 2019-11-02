@@ -160,7 +160,7 @@ class Metrics:
             control_mean, control_var = gp_control.predict(np.asarray([[t]]))
             case_mean, case_var = gp_case.predict(np.asarray([[t]]))
 
-            return np.log10(case_var / control_var) + ((control_var + \
+            return 0.5 * np.log(case_var / control_var) + ((control_var + \
                             (control_mean - case_mean) ** 2) / (2 * case_var))
 
         kl_divergence = abs(quad(kl_integrand, case_start, max(obs_times))
